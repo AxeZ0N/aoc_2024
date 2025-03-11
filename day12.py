@@ -1,50 +1,3 @@
-from pprint import pprint
-
-card = ('NORTH','EAST','SOUTH','WEST')
-c = ('N','E','S','W')
-card_inals = ((-1,0),(0,1),(1,0),(0,-1))
-
-CARDINALS = {x:(y,z) for x,y,z in zip(c,card,card_inals)}
-
-print(CARDINALS)
-
-class Plot:
-    def __init__(self, coords, color):
-        self.coords = coords
-        self.color = color
-        self.walls = (c for _ in range(4))
-
-
-class Blob:
-    garden = [[None],]
-    def is_border(self, coords, direction):
-        i,j = coords
-        di,dj = CARDINALS[direction][1]
-        return self.garden[i][j].color == self.garden[i+di][j+dj].color
-
-
-with open('input.txt','r') as f:
-    garden = []
-    for i,row in enumerate(f):
-        tmp = []
-        for j,c in enumerate(row):
-            tmp.append(Plot((i,j),c))
-        garden.append(tmp)
-    sl = len(garden)
-
-class Garden:
-    garden = [[None],]
-    def __init__(self, garden):
-        self.garden = garden
-
-
-G = Garden(garden)
-
-P = Plot((0,0),None)
-B = Blob()
-
-print(P.color)
-
 # problem class: graph theory
 # algo: test spreading color blocks, nodes are 'plots'
 #
@@ -73,4 +26,54 @@ print(P.color)
 # if plot has all 4 walls, it's an orphan
 # if plot has < 4 walls, it's part of a blob
 # map borders act as walls
+# # # # 
+#
+# base case for sim
+#   Plot: ( (x,y), Color )
+#   Garden = [ Plot, ]
+#   Perimeter: (Plot1,Plot2) where x2,y2 = x1+-1,y1+-1 and Color1 != Color2
+#   Area: [ Plot.color1, Plot.color1, ... ] 
 
+from pprint import pprint
+from collections import defaultdict, Counter
+from dataclasses import dataclass
+
+
+@dataclass
+class Plot:
+    coords: int
+    color: str
+
+    def __add__(self, x): return self.coords[0]+x.coords[0], self.coords[1]+x.coords[1]
+    def __sub__(self, x): return self.coords[0]+-x.coords[0], self.coords[1]+-x.coords[1]
+    def __abs__(self): return abs(self.coords[0]), abs(self.coords[1])
+
+def get_input():
+    with open('input.txt','r') as f:
+        for i,line in enumerate(f.readlines()):
+            for j,plot in enumerate(line.strip()):
+                yield (i,j,plot)
+
+def are_touching(plot1,plot2):
+    print(plot1,plot2)
+    (x1,y1),(x2,y2) = plot1.coords, plot2.coords
+    dx,dy = abs(x2-x1),abs(y2-y1)
+    return dx,dy == 0,1 or dx,dy == 1,0
+
+def is_perimeter(plot1,plot2):
+    if are_touching(plot1,plot2) and plot1.color != plot2.color: return True
+    else: return False
+
+GARDEN = [Plot((i,j),x) for i,j,x in get_input()]
+
+PERIMETERS = defaultdict(set,)
+
+
+
+print(list(get_input()))
+
+print(GARDEN)
+
+AREAS = Counter([x.color for x in GARDEN])
+
+print(AREAS)
