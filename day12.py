@@ -1,35 +1,8 @@
 # problem class: graph theory
-# algo: test spreading color blocks, nodes are 'plots'
-#
-# description:
-#   recursively check each cardinal, for each coord
-#   track whether i,j -> i+di,j+dj is blob border
-#
-# base case:
-#   return tile == blob
-#
-# loops:
-#   for each i,j in coords:
-#    if i,j not in blob:
-#     for each cardinal direction:
-#       if base case: blob.add(i,j)
-#
-# test whether given line seg is border
-#   if plot[i][j].color == plot[x][y].color
-#
-# test each cardinal for border status
-#   curr_plot = i,j
-#   for C in CARDINALS:
-#       x,y = C
-#       self.walls[C] = self.test_border(C: <CARDINAL>)
-#
-# if plot has all 4 walls, it's an orphan
-# if plot has < 4 walls, it's part of a blob
-# map borders act as walls
-# # # # 
-#
 # base case for sim
+#   All non-contiguous symbols are unique
 #   Plot: ( (x,y), Color )
+#   Blob: Plot of Color C and tiles touching
 #   Garden = [ Plot, ]
 #   Perimeter: (Plot1,Plot2) where x2,y2 = x1+-1,y1+-1 and Color1 != Color2
 #   Area: [ Plot.color1, Plot.color1, ... ] 
@@ -37,28 +10,29 @@
 from pprint import pprint
 from collections import defaultdict, Counter
 from dataclasses import dataclass
+from itertools import product, pairwise
 
 
 @dataclass
 class Plot:
     coords: int
     color: str
-
-    def __add__(self, x): return self.coords[0]+x.coords[0], self.coords[1]+x.coords[1]
-    def __sub__(self, x): return self.coords[0]+-x.coords[0], self.coords[1]+-x.coords[1]
-    def __abs__(self): return abs(self.coords[0]), abs(self.coords[1])
+    blob: int = None
 
 def get_input():
+    seen = set()
     with open('input.txt','r') as f:
         for i,line in enumerate(f.readlines()):
             for j,plot in enumerate(line.strip()):
                 yield (i,j,plot)
 
 def are_touching(plot1,plot2):
-    print(plot1,plot2)
     (x1,y1),(x2,y2) = plot1.coords, plot2.coords
     dx,dy = abs(x2-x1),abs(y2-y1)
-    return dx,dy == 0,1 or dx,dy == 1,0
+    match (dx,dy):
+        case (0,1): return True
+        case (1,0): return True
+        case _: return False
 
 def is_perimeter(plot1,plot2):
     if are_touching(plot1,plot2) and plot1.color != plot2.color: return True
@@ -66,14 +40,34 @@ def is_perimeter(plot1,plot2):
 
 GARDEN = [Plot((i,j),x) for i,j,x in get_input()]
 
-PERIMETERS = defaultdict(set,)
+BLOB_COUNTER = 0
+for g in GARDEN:
+    if g.blob is None: 
+        touch_plot = [p for p in GARDEN if are_touching(p,g)]
+        for tp in touch_plot:
+            if tp.blob is not None and tp.color == g.color: 
+                g.blob = tp.blob
+        if g.blob is None:
+            g.blob = BLOB_COUNTER
+            BLOB_COUNTER+=1
+
+AREAS = defaultdict(int)
+
+for curr_blob in range(BLOB_COUNTER):
+    for g in GARDEN:
+        if g.blob == curr_blob: AREAS[g.blob] += 1
+
+PERIMS = defaultdict(int)
 
 
+count = 0
 
-print(list(get_input()))
+for g in GARDEN:
+    touch_plot = [p for p in GARDEN if are_touching(p,g)]
+    for tp in touch_plot:
+        if tp.color == g.color: continue
+        PERIMS[g.blob]+=1
 
-print(GARDEN)
 
-AREAS = Counter([x.color for x in GARDEN])
-
-print(AREAS)
+print(count)
+print(PERIMS)
